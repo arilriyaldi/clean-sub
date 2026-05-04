@@ -8,6 +8,7 @@ import Hero from './components/Hero';
 import Features from './components/Features';
 import Pricing from './components/Pricing';
 import Footer from './components/Footer';
+import ChatBot from './components/ChatBot';
 import { motion } from 'motion/react';
 
 export default function App() {
@@ -63,6 +64,7 @@ export default function App() {
       </main>
 
       <Footer />
+      <ChatBot />
     </div>
   );
 }
