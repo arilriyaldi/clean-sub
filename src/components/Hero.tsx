@@ -1,7 +1,14 @@
 import { motion } from 'motion/react';
 import { ArrowRight, CheckCircle2, Calendar } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
-export default function Hero() {
+interface HeroProps {
+  onAuthRequired: () => void;
+}
+
+export default function Hero({ onAuthRequired }: HeroProps) {
+  const { user } = useAuth();
+
   return (
     <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
       {/* Background Image with Overlay */}
@@ -39,8 +46,11 @@ export default function Hero() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
-              <button className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary-dark transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-2 group cursor-pointer">
-                Daftar Sekarang
+              <button 
+                onClick={() => user ? window.location.hash = '#langganan' : onAuthRequired()}
+                className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary-dark transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                {user ? 'Lihat Paket Saya' : 'Daftar Sekarang'}
                 <ArrowRight className="group-hover:translate-x-1 transition-transform" />
               </button>
               <button className="bg-white text-slate-900 border border-slate-200 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-2 cursor-pointer">

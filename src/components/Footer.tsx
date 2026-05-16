@@ -1,4 +1,4 @@
-import { Trash2, Instagram, Twitter, Facebook, Mail, Phone, MapPin } from 'lucide-react';
+import { Trash2, Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -18,14 +18,14 @@ export default function Footer() {
               Mewujudkan lingkungan yang lebih bersih dan sehat melalui teknologi pengelolaan sampah yang modern dan terjangkau.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-primary transition-colors">
-                <Instagram size={20} />
-              </a>
-              <a href="#" className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-primary transition-colors">
-                <Twitter size={20} />
-              </a>
-              <a href="#" className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-primary transition-colors">
-                <Facebook size={20} />
+              <a 
+                href="https://wa.me/6283125720412" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-primary transition-colors text-white"
+                title="Hubungi kami di WhatsApp"
+              >
+                <MessageCircle size={20} />
               </a>
             </div>
           </div>
@@ -35,8 +35,6 @@ export default function Footer() {
             <ul className="space-y-4">
               <li><a href="#fitur" className="text-slate-400 hover:text-white transition-colors">Fitur Utama</a></li>
               <li><a href="#langganan" className="text-slate-400 hover:text-white transition-colors">Paket Langganan</a></li>
-              <li><a href="#" className="text-slate-400 hover:text-white transition-colors">Mitra Pengumpul</a></li>
-              <li><a href="#" className="text-slate-400 hover:text-white transition-colors">Karir</a></li>
             </ul>
           </div>
 
@@ -59,11 +57,11 @@ export default function Footer() {
               </li>
               <li className="flex gap-3 items-center">
                 <Phone size={18} className="text-primary" />
-                +62 812-3456-7890
+                +62 831-2572-0412
               </li>
               <li className="flex gap-3 items-start">
                 <MapPin size={18} className="text-primary mt-1" />
-                Jl. Kebersihan Raya No. 45, <br />Jakarta Selatan, 12345
+                Dul, Kabupaten Bangka Tengah, <br />Kepulauan Bangka Belitung 33681
               </li>
             </ul>
           </div>

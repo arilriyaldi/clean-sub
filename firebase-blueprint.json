@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Store user profile and subscription information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID." },
+        "fullName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "address": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "subscriptionPlan": { 
+          "type": "string", 
+          "enum": ["none", "Basic", "Standard", "Premium"],
+          "default": "none"
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "fullName"]
+    },
+    "PickupRequest": {
+      "title": "Pickup Request",
+      "description": "Log of garbage pickup requests or history.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "scheduledAt": { "type": "string", "format": "date-time" },
+        "status": { 
+          "type": "string", 
+          "enum": ["pending", "completed", "cancelled"] 
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "scheduledAt", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user bio and plan details."
+    },
+    "/pickups/{pickupId}": {
+      "schema": "PickupRequest",
+      "description": "Collection of pickup schedules."
+    }
+  }
+}
