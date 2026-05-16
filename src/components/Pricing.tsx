@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useState } from 'react';
+import PaymentModal from './PaymentModal';
 
 interface PricingProps {
   onAuthRequired: () => void;
@@ -55,23 +56,32 @@ const plans = [
 export default function Pricing({ onAuthRequired }: PricingProps) {
   const { user, profile, refreshProfile } = useAuth();
   const [updating, setUpdating] = useState<string | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<{name: string, price: string} | null>(null);
 
-  const handleSelectPlan = async (planName: string) => {
+  const handleSelectPlan = (planName: string, price: string) => {
     if (!user) {
       onAuthRequired();
       return;
     }
+    setSelectedPlanForPayment({ name: planName, price });
+    setIsPaymentModalOpen(true);
+  };
 
-    setUpdating(planName);
+  const confirmPayment = async (methodId: string) => {
+    if (!user || !selectedPlanForPayment) return;
+
+    setUpdating(selectedPlanForPayment.name);
     try {
       await updateDoc(doc(db, 'users', user.uid), {
-        subscriptionPlan: planName,
+        subscriptionPlan: selectedPlanForPayment.name,
+        paymentMethod: methodId,
         updatedAt: serverTimestamp(),
       });
       await refreshProfile();
-      alert(`Selamat! Anda telah berlangganan paket ${planName}.`);
     } catch (error) {
       console.error("Error updating subscription:", error);
+      throw error;
     } finally {
       setUpdating(null);
     }
@@ -145,7 +155,7 @@ export default function Pricing({ onAuthRequired }: PricingProps) {
                 </div>
 
                 <button 
-                  onClick={() => handleSelectPlan(plan.name)}
+                  onClick={() => handleSelectPlan(plan.name, plan.price)}
                   disabled={isCurrentPlan || updating === plan.name}
                   className={`w-full py-4 rounded-2xl font-black text-lg transition-all cursor-pointer disabled:opacity-50 ${
                     isCurrentPlan 
@@ -161,6 +171,14 @@ export default function Pricing({ onAuthRequired }: PricingProps) {
             );
           })}
         </div>
+        
+        <PaymentModal 
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          planName={selectedPlanForPayment?.name || ''}
+          planPrice={selectedPlanForPayment?.price || ''}
+          onConfirm={confirmPayment}
+        />
         
         <div className="mt-16 bg-slate-50 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 border border-slate-100">
           <div>
