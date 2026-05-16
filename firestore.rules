@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email', 'fullName', 'subscriptionPlan']) &&
+               data.uid is string &&
+               data.email is string &&
+               data.fullName is string &&
+               data.fullName.size() <= 100 &&
+               data.subscriptionPlan in ['none', 'Basic', 'Standard', 'Premium'];
+      }
+
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.uid == userId;
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subscriptionPlan', 'updatedAt', 'fullName', 'address', 'phoneNumber'])
+      );
+    }
+
+    // --- Pickups Collection ---
+    match /pickups/{pickupId} {
+      function isValidPickup(data) {
+        return data.keys().hasAll(['userId', 'scheduledAt', 'status', 'createdAt']) &&
+               data.userId == request.auth.uid &&
+               data.status in ['pending', 'completed', 'cancelled'];
+      }
+
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidPickup(request.resource.data);
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && 
+                    isValidPickup(request.resource.data) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'scheduledAt']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid && resource.data.status == 'pending';
+    }
+  }
+}
