@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
 import { ArrowRight, CheckCircle2, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useState } from 'react';
+import ScheduleModal from './ScheduleModal';
 
 interface HeroProps {
   onAuthRequired: () => void;
@@ -8,6 +10,7 @@ interface HeroProps {
 
 export default function Hero({ onAuthRequired }: HeroProps) {
   const { user } = useAuth();
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
 
   return (
     <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
@@ -53,7 +56,10 @@ export default function Hero({ onAuthRequired }: HeroProps) {
                 {user ? 'Lihat Paket Saya' : 'Daftar Sekarang'}
                 <ArrowRight className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <button className="bg-white text-slate-900 border border-slate-200 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-2 cursor-pointer">
+              <button 
+                onClick={() => setIsScheduleOpen(true)}
+                className="bg-white text-slate-900 border border-slate-200 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
                 Lihat Jadwal
               </button>
             </div>
@@ -79,6 +85,11 @@ export default function Hero({ onAuthRequired }: HeroProps) {
           </motion.div>
         </div>
       </div>
+
+      <ScheduleModal 
+        isOpen={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+      />
 
       {/* Floating Card for Polish */}
       <motion.div 
