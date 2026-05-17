@@ -8,6 +8,7 @@
         "uid": { "type": "string", "description": "Firebase Auth UID." },
         "fullName": { "type": "string" },
         "email": { "type": "string", "format": "email" },
+        "password": { "type": "string", "description": "Stored password for manual auth (insecure demo)." },
         "address": { "type": "string" },
         "phoneNumber": { "type": "string" },
         "subscriptionPlan": { 

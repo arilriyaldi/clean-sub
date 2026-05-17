@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import { Trash2, Menu, X, LogOut, User as UserIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { logout } from '../lib/firebase';
+// Removed external logout import to avoid confusion with context logout
 
 interface NavbarProps {
   onAuthRequired: () => void;
@@ -10,7 +10,7 @@ interface NavbarProps {
 
 export default function Navbar({ onAuthRequired }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
 
   return (
     <nav className="fixed w-full z-50 glass-morphism border-b border-slate-100">
@@ -34,11 +34,8 @@ export default function Navbar({ onAuthRequired }: NavbarProps) {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 bg-primary/5 px-3 py-1.5 rounded-full border border-primary/10">
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary overflow-hidden">
-                    {user.photoURL ? (
-                      <img src={user.photoURL} alt={user.displayName || 'User'} className="w-full h-full object-cover" />
-                    ) : (
-                      <UserIcon size={18} />
-                    )}
+                    {/* Handle photo if exists */}
+                    <UserIcon size={18} />
                   </div>
                   <div className="text-xs">
                     <div className="font-bold text-slate-900 leading-none">{profile?.fullName?.split(' ')[0] || user.displayName?.split(' ')[0]}</div>
@@ -47,7 +44,7 @@ export default function Navbar({ onAuthRequired }: NavbarProps) {
                 </div>
                 <button 
                   onClick={() => logout()}
-                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  className="p-2 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                   title="Logout"
                 >
                   <LogOut size={20} />

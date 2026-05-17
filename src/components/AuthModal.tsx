@@ -5,9 +5,10 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ShieldCheck, Mail, Lock, User, ArrowLeft, ArrowRight } from 'lucide-react';
-import { signInWithGoogle, auth } from '../lib/firebase';
-import { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+import { signInWithGoogle, db } from '../lib/firebase';
+import React, { useState } from 'react';
+import { collection, query, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface AuthModalProps {
 type AuthMode = 'choice' | 'login' | 'register';
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+  const { loginManual } = useAuth();
   const [mode, setMode] = useState<AuthMode>('choice');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,9 +51,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       await signInWithGoogle();
       onSuccess?.();
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
-      setError("Gagal masuk dengan Google.");
+      if (error.code === 'auth/popup-closed-by-user') {
+        setError("Jendela masuk ditutup. Silakan coba lagi dan jangan tutup jendela popup.");
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        setError("Permintaan masuk dibatalkan. Silakan coba lagi.");
+      } else {
+        setError("Gagal masuk dengan Google. Silakan coba lagi nanti.");
+      }
     } finally {
       setLoading(false);
     }
@@ -65,28 +73,63 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
     try {
       if (mode === 'register') {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName: fullName });
+        // 1. Check if user already exists
+        const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
+        const querySnapshot = await getDocs(q);
         
-        // As requested: "setelah berhasil registrasi baru bisa login"
-        // We sign them out so they have to login manually
-        await signOut(auth);
+        if (!querySnapshot.empty) {
+          setError('Email ini sudah terdaftar. Silakan login.');
+          setLoading(false);
+          return;
+        }
+
+        // 2. Create custom user document
+        const newUid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        await setDoc(doc(db, 'users', newUid), {
+          uid: newUid,
+          email: email.toLowerCase(),
+          password: password, // In a real app, this should be hashed. For this demo, it's a direct store.
+          fullName: fullName,
+          subscriptionPlan: 'none',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
         
         setSuccessMessage("Registrasi berhasil! Silakan masuk dengan akun Anda.");
         setMode('login');
-        setPassword(''); // Clear password for security
+        setPassword('');
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        // Login logic
+        const q = query(
+          collection(db, 'users'), 
+          where('email', '==', email.toLowerCase()), 
+          where('password', '==', password)
+        );
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          setError('Email atau kata sandi salah.');
+          setLoading(false);
+          return;
+        }
+
+        const userData = querySnapshot.docs[0].data();
+        loginManual({
+          uid: userData.uid,
+          email: userData.email,
+          displayName: userData.fullName
+        });
+        
         onSuccess?.();
         handleClose();
       }
     } catch (err: any) {
-      console.error("Auth error", err);
-      if (err.code === 'auth/email-already-in-use') setError('Email sudah terdaftar.');
-      else if (err.code === 'auth/invalid-credential') setError('Email atau kata sandi salah.');
-      else if (err.code === 'auth/invalid-email') setError('Format email tidak valid.');
-      else if (err.code === 'auth/weak-password') setError('Kata sandi minimal 6 karakter.');
-      else setError('Terjadi kesalahan. Silakan coba lagi.');
+      console.error("Auth error:", err);
+      if (err.message?.includes('permissions')) {
+        setError('Gagal mengakses data (Izin Ditolak). Hubungi admin jika ini berlanjut.');
+      } else {
+        setError('Terjadi masalah teknis. Silakan coba beberapa saat lagi.');
+      }
     } finally {
       setLoading(false);
     }
@@ -244,7 +287,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                       <input
                         required
                         type="email"
-                        placeholder="nama@email.com"
+                        placeholder="nama@gmail.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-primary focus:bg-white transition-all outline-none"

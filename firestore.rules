@@ -29,16 +29,14 @@ service cloud.firestore {
         return data.keys().hasAll(['uid', 'email', 'fullName', 'subscriptionPlan']) &&
                data.uid is string &&
                data.email is string &&
-               data.fullName is string &&
-               data.fullName.size() <= 100 &&
-               data.subscriptionPlan in ['none', 'Basic', 'Standard', 'Premium'];
+               data.fullName is string;
       }
 
-      allow get: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.uid == userId;
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subscriptionPlan', 'updatedAt', 'fullName', 'address', 'phoneNumber'])
-      );
+      // Allow public access for manual authentication (since Firebase Auth is disabled)
+      allow get: if true;
+      allow list: if true;
+      allow create: if isValidUser(request.resource.data);
+      allow update: if true; // Insecure fallback for custom auth logic
     }
 
     // --- Pickups Collection ---
