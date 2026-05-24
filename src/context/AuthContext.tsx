@@ -4,17 +4,15 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-interface UserAccount {
+export interface UserAccount {
   uid: string;
   fullName: string;
   email: string;
   subscriptionPlan: string;
   address?: string;
   phoneNumber?: string;
+  password?: string;
 }
 
 interface AuthContextType {
@@ -24,6 +22,11 @@ interface AuthContextType {
   refreshProfile: (uid?: string) => Promise<void>;
   logout: () => Promise<void>;
   loginManual: (user: { uid: string; email: string; displayName: string }) => void;
+  // Local Database actions
+  localRegister: (fullName: string, phoneNumber: string, address: string, email: string, password: string) => Promise<UserAccount>;
+  localLogin: (email: string, password: string) => Promise<UserAccount>;
+  localUpdateProfile: (fullName: string, phoneNumber: string, address: string, email: string) => Promise<UserAccount>;
+  localUpdateSubscription: (planName: string, paymentMethod?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,7 +36,29 @@ const AuthContext = createContext<AuthContextType>({
   refreshProfile: async () => {},
   logout: async () => {},
   loginManual: () => {},
+  localRegister: async () => ({} as UserAccount),
+  localLogin: async () => ({} as UserAccount),
+  localUpdateProfile: async () => ({} as UserAccount),
+  localUpdateSubscription: async () => {},
 });
+
+const LOCAL_USERS_KEY = 'cleansub_registered_users';
+const LOCAL_SESSION_KEY = 'cleansub_session';
+
+// Helper to get registered users
+const getLocalUsers = (): UserAccount[] => {
+  try {
+    const raw = localStorage.getItem(LOCAL_USERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// Helper to save registered users
+const saveLocalUsers = (users: UserAccount[]) => {
+  localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<{ uid: string; email?: string | null; displayName?: string | null } | null>(null);
@@ -41,80 +66,213 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const loginManual = (userData: { uid: string; email: string; displayName: string }) => {
-    localStorage.setItem('cleansub_session', JSON.stringify(userData));
+    localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(userData));
     setUser(userData);
     refreshProfile(userData.uid);
   };
 
   const refreshProfile = async (currentUid?: string) => {
-    const uid = currentUid || user?.uid || auth.currentUser?.uid;
+    const uid = currentUid || user?.uid;
     if (!uid) {
       setProfile(null);
       return;
     }
 
     try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data() as UserAccount;
-        setProfile(data);
+      const users = getLocalUsers();
+      const foundUser = users.find(u => u.uid === uid);
+      if (foundUser) {
+        setProfile(foundUser);
         if (!user) {
-          setUser({ uid: data.uid, email: data.email, displayName: data.fullName });
+          setUser({ uid: foundUser.uid, email: foundUser.email, displayName: foundUser.fullName });
         }
-      } else if (auth.currentUser) {
-        const newProfile: UserAccount = {
-          uid: auth.currentUser.uid,
-          fullName: auth.currentUser.displayName || 'User',
-          email: auth.currentUser.email || '',
-          subscriptionPlan: 'none',
+      } else {
+        // Fallback user profile
+        const fallbackUser: UserAccount = {
+          uid: uid,
+          fullName: user?.displayName || 'User CleanSub',
+          email: user?.email || '',
+          subscriptionPlan: 'none'
         };
-        await setDoc(doc(db, 'users', auth.currentUser.uid), {
-          ...newProfile,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-        setProfile(newProfile);
+        setProfile(fallbackUser);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
   };
 
+  const localRegister = async (fullName: string, phoneNumber: string, address: string, email: string, password: string): Promise<UserAccount> => {
+    const users = getLocalUsers();
+    const emailNorm = email.trim().toLowerCase();
+    
+    if (users.some(u => u.email.toLowerCase() === emailNorm)) {
+      throw new Error('Email ini sudah terdaftar. Silakan login.');
+    }
+
+    const newUid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const newUser: UserAccount = {
+      uid: newUid,
+      fullName: fullName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      address: address.trim(),
+      email: emailNorm,
+      password: password,
+      subscriptionPlan: 'none'
+    };
+
+    users.push(newUser);
+    saveLocalUsers(users);
+
+    return newUser;
+  };
+
+  const localLogin = async (email: string, password: string): Promise<UserAccount> => {
+    const users = getLocalUsers();
+    const emailNorm = email.trim().toLowerCase();
+    
+    const foundUser = users.find(u => u.email.toLowerCase() === emailNorm && u.password === password);
+    if (!foundUser) {
+      throw new Error('Email atau kata sandi salah.');
+    }
+
+    const sessionUser = { uid: foundUser.uid, email: foundUser.email, displayName: foundUser.fullName };
+    localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(sessionUser));
+    
+    setUser(sessionUser);
+    setProfile(foundUser);
+    
+    return foundUser;
+  };
+
+  const localUpdateProfile = async (fullName: string, phoneNumber: string, address: string, email: string): Promise<UserAccount> => {
+    const currentUid = user?.uid;
+    if (!currentUid) throw new Error('Silakan masuk terlebih dahulu.');
+
+    const users = getLocalUsers();
+    const index = users.findIndex(u => u.uid === currentUid);
+    if (index === -1) {
+      // Create profile dynamically and push to database if not exists (e.g. they had a partial session)
+      const newUser: UserAccount = {
+        uid: currentUid,
+        fullName: fullName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        address: address.trim(),
+        email: email.trim().toLowerCase(),
+        subscriptionPlan: 'none'
+      };
+      users.push(newUser);
+      saveLocalUsers(users);
+      
+      const sessionUser = { uid: newUser.uid, email: newUser.email, displayName: newUser.fullName };
+      localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(sessionUser));
+      setUser(sessionUser);
+      setProfile(newUser);
+      return newUser;
+    }
+
+    const updatedUser: UserAccount = {
+      ...users[index],
+      fullName: fullName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      address: address.trim(),
+      email: email.trim().toLowerCase()
+    };
+
+    users[index] = updatedUser;
+    saveLocalUsers(users);
+
+    const sessionUser = { uid: updatedUser.uid, email: updatedUser.email, displayName: updatedUser.fullName };
+    localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(sessionUser));
+    
+    setUser(sessionUser);
+    setProfile(updatedUser);
+
+    return updatedUser;
+  };
+
+  const localUpdateSubscription = async (planName: string, paymentMethod?: string): Promise<void> => {
+    const currentUid = user?.uid;
+    if (!currentUid) throw new Error('Silakan masuk terlebih dahulu.');
+
+    const users = getLocalUsers();
+    const index = users.findIndex(u => u.uid === currentUid);
+    if (index === -1) {
+      // Dynamically make user in database if missing
+      const newUser: UserAccount = {
+        uid: currentUid,
+        fullName: user.displayName || 'User CleanSub',
+        phoneNumber: '',
+        address: '',
+        email: user.email || '',
+        subscriptionPlan: planName
+      };
+      users.push(newUser);
+      saveLocalUsers(users);
+      setProfile(newUser);
+      return;
+    }
+
+    const updatedUser: UserAccount = {
+      ...users[index],
+      subscriptionPlan: planName
+    };
+
+    if (paymentMethod) {
+      // Just visually track if needed, or save
+      (updatedUser as any).paymentMethod = paymentMethod;
+    }
+
+    users[index] = updatedUser;
+    saveLocalUsers(users);
+
+    setProfile(updatedUser);
+  };
+
   const logout = async () => {
-    await signOut(auth);
-    localStorage.removeItem('cleansub_session');
+    localStorage.removeItem(LOCAL_SESSION_KEY);
     setUser(null);
     setProfile(null);
   };
 
   useEffect(() => {
-    const savedSession = localStorage.getItem('cleansub_session');
+    const savedSession = localStorage.getItem(LOCAL_SESSION_KEY);
     if (savedSession) {
       try {
         const sessionData = JSON.parse(savedSession);
         setUser(sessionData);
-        refreshProfile(sessionData.uid);
+        // Fetch profile
+        const users = getLocalUsers();
+        const found = users.find(u => u.uid === sessionData.uid);
+        if (found) {
+          setProfile(found);
+        } else {
+          setProfile({
+            uid: sessionData.uid,
+            fullName: sessionData.displayName || 'User',
+            email: sessionData.email || '',
+            subscriptionPlan: 'none'
+          });
+        }
       } catch (e) {
-        localStorage.removeItem('cleansub_session');
+        localStorage.removeItem(LOCAL_SESSION_KEY);
       }
     }
-
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        setUser({ uid: fbUser.uid, email: fbUser.email, displayName: fbUser.displayName });
-        await refreshProfile(fbUser.uid);
-      } else if (!localStorage.getItem('cleansub_session')) {
-        setUser(null);
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    setLoading(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refreshProfile, logout, loginManual }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      refreshProfile, 
+      logout, 
+      loginManual,
+      localRegister,
+      localLogin,
+      localUpdateProfile,
+      localUpdateSubscription
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -11,8 +11,6 @@ import {
   Trash2, Leaf, Heart, Trophy, Clock, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { getUpcomingPickups, formatIndonesianDate } from '../utils/schedule';
 
 interface ProfilePageProps {
@@ -114,7 +112,7 @@ const AVATAR_COLORS = [
 ];
 
 export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePageProps) {
-  const { user, profile, refreshProfile, logout } = useAuth();
+  const { user, profile, refreshProfile, logout, localUpdateProfile } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -146,12 +144,12 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
     }
   }, [profile]);
 
-  // If user is not authenticated, show a gorgeous clean signup template
+  // If user is not authenticated, redirect to home page safely
   useEffect(() => {
     if (!user) {
-      onAuthRequired();
+      onBackToHome();
     }
-  }, [user, onAuthRequired]);
+  }, [user, onBackToHome]);
 
   // Expiration date (automatically simulated as 30 days from now)
   const expirationDateStr = useMemo(() => {
@@ -220,30 +218,7 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
     setSuccess(null);
 
     try {
-      const userRef = doc(db, 'users', user.uid);
-      const updatedFields = {
-        fullName,
-        address,
-        phoneNumber,
-        email: email.toLowerCase(),
-        updatedAt: serverTimestamp()
-      };
-
-      await setDoc(userRef, updatedFields, { merge: true });
-      await refreshProfile(user.uid);
-
-      // Update storage session
-      const savedSession = localStorage.getItem('cleansub_session');
-      if (savedSession) {
-        try {
-          const sessionData = JSON.parse(savedSession);
-          sessionData.displayName = fullName;
-          sessionData.email = email.toLowerCase();
-          localStorage.setItem('cleansub_session', JSON.stringify(sessionData));
-        } catch (e) {
-          console.error(e);
-        }
-      }
+      await localUpdateProfile(fullName, phoneNumber, address, email);
 
       setSuccess('Profil dan alamat pengiriman CleanSub berhasil diperbarui!');
       setIsEditing(false);

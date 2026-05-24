@@ -5,9 +5,7 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ShieldCheck, Mail, Lock, User, ArrowLeft, ArrowRight, Phone, MapPin } from 'lucide-react';
-import { signInWithGoogle, db } from '../lib/firebase';
 import React, { useState } from 'react';
-import { collection, query, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 
 interface AuthModalProps {
@@ -19,7 +17,7 @@ interface AuthModalProps {
 type AuthMode = 'choice' | 'login' | 'register';
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-  const { loginManual } = useAuth();
+  const { localRegister, localLogin } = useAuth();
   const [mode, setMode] = useState<AuthMode>('choice');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,27 +46,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     onClose();
   };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await signInWithGoogle();
-      onSuccess?.();
-      handleClose();
-    } catch (error: any) {
-      console.error("Login failed", error);
-      if (error.code === 'auth/popup-closed-by-user') {
-        setError("Jendela masuk ditutup. Silakan coba lagi dan jangan tutup jendela popup.");
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        setError("Permintaan masuk dibatalkan. Silakan coba lagi.");
-      } else {
-        setError("Gagal masuk dengan Google. Silakan coba lagi nanti.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -77,65 +54,18 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
     try {
       if (mode === 'register') {
-        // 1. Check if user already exists
-        const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          setError('Email ini sudah terdaftar. Silakan login.');
-          setLoading(false);
-          return;
-        }
-
-        // 2. Create custom user document
-        const newUid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        await setDoc(doc(db, 'users', newUid), {
-          uid: newUid,
-          email: email.toLowerCase(),
-          password: password, // In a real app, this should be hashed. For this demo, it's a direct store.
-          fullName: fullName,
-          address: address,
-          phoneNumber: phoneNumber,
-          subscriptionPlan: 'none',
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-        
+        await localRegister(fullName, phoneNumber, address, email, password);
         setSuccessMessage("Registrasi berhasil! Silakan masuk dengan akun Anda.");
         setMode('login');
         setPassword('');
       } else {
-        // Login logic
-        const q = query(
-          collection(db, 'users'), 
-          where('email', '==', email.toLowerCase()), 
-          where('password', '==', password)
-        );
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          setError('Email atau kata sandi salah.');
-          setLoading(false);
-          return;
-        }
-
-        const userData = querySnapshot.docs[0].data();
-        loginManual({
-          uid: userData.uid,
-          email: userData.email,
-          displayName: userData.fullName
-        });
-        
+        await localLogin(email, password);
         onSuccess?.();
         handleClose();
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      if (err.message?.includes('permissions')) {
-        setError('Gagal mengakses data (Izin Ditolak). Hubungi admin jika ini berlanjut.');
-      } else {
-        setError('Terjadi masalah teknis. Silakan coba beberapa saat lagi.');
-      }
+      setError(err.message || 'Terjadi masalah teknis. Silakan coba beberapa saat lagi.');
     } finally {
       setLoading(false);
     }
@@ -238,24 +168,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                       </div>
                     </div>
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-
-                  <div className="relative my-2">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-slate-100"></div>
-                    </div>
-                    <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-black text-slate-300 bg-white px-4">
-                      Atau
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleGoogleLogin}
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 py-3 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-200 transition-all group disabled:opacity-50"
-                  >
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                    Lanjutkan dengan Google
                   </button>
                 </div>
               ) : (

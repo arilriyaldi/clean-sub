@@ -1,8 +1,6 @@
 import { motion } from 'motion/react';
 import { Check, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { useState } from 'react';
 import PaymentModal from './PaymentModal';
 
@@ -54,7 +52,7 @@ const plans = [
 ];
 
 export default function Pricing({ onAuthRequired }: PricingProps) {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, localUpdateSubscription } = useAuth();
   const [updating, setUpdating] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<{name: string, price: string} | null>(null);
@@ -73,12 +71,7 @@ export default function Pricing({ onAuthRequired }: PricingProps) {
 
     setUpdating(selectedPlanForPayment.name);
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        subscriptionPlan: selectedPlanForPayment.name,
-        paymentMethod: methodId,
-        updatedAt: serverTimestamp(),
-      });
-      await refreshProfile();
+      await localUpdateSubscription(selectedPlanForPayment.name, methodId);
     } catch (error) {
       console.error("Error updating subscription:", error);
       throw error;
