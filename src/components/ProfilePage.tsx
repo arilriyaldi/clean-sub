@@ -8,7 +8,7 @@ import { motion } from 'motion/react';
 import { 
   User, MapPin, Phone, Mail, Save, Edit2, ShieldAlert, Check, Star, 
   Calendar, CreditCard, Award, Sparkles, ShieldCheck, ArrowLeft,
-  Trash2, Leaf, Heart, Trophy, Clock, LogOut
+  Trash2, Leaf, Heart, Trophy, Clock, LogOut, Bell, Play, Navigation, Volume2, Smartphone, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUpcomingPickups, formatIndonesianDate } from '../utils/schedule';
@@ -125,6 +125,134 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // States for Notifikasi Pintar (Smart Notifications)
+  const [waNotify, setWaNotify] = useState(true);
+  const [popupNotify, setPopupNotify] = useState(true);
+  const [soundNotify, setSoundNotify] = useState(true);
+  
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simStep, setSimStep] = useState(0); 
+  const [activeToast, setActiveToast] = useState<{title: string, msg: string} | null>(null);
+
+  // Helper function to synthesize audio natively with Web Audio API
+  const playSfx = (type: 'chime' | 'arrival') => {
+    if (!soundNotify) return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      if (type === 'chime') {
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        gain1.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.35);
+
+        // Delayed second pitch mapping
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        setTimeout(() => {
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(880.00, ctx.currentTime); // A5
+          gain2.gain.setValueAtTime(0.12, ctx.currentTime);
+          gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+          osc2.start(ctx.currentTime);
+          osc2.stop(ctx.currentTime + 0.4);
+        }, 120);
+      } else {
+        // Melodic triple chime representing arrival
+        const playNote = (freq: number, start: number, dur: number) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime + start);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + dur);
+          osc.start(ctx.currentTime + start);
+          osc.stop(ctx.currentTime + start + dur);
+        };
+        playNote(523.25, 0, 0.25);     // C5
+        playNote(659.25, 0.12, 0.25);  // E5
+        playNote(783.99, 0.24, 0.25);  // G5
+        playNote(1046.50, 0.36, 0.4);  // C6
+      }
+    } catch (e) {
+      console.warn("Web Audio API not supported or user gesture required first:", e);
+    }
+  };
+
+  // Run courier simulator sequence
+  const handleStartSimulation = () => {
+    setIsSimulating(true);
+    setSimStep(1);
+    playSfx('chime');
+    
+    if (popupNotify) {
+      setActiveToast({
+        title: "📲 Notifikasi Pintar: Andi Mulai Berjalan!",
+        msg: `Petugas Andi Wijaya telah beranjak dari Hub CleanSub se-Bangka Belitung menuju rumah Anda di ${address || 'Alamat Anda'}.`
+      });
+    }
+  };
+
+  // Auto progression of simulated steps
+  useEffect(() => {
+    if (!isSimulating || simStep === 0) return;
+
+    if (simStep === 4) {
+      // Completed, let's keep it on screen or clear after timeout
+      const timer = setTimeout(() => {
+        setIsSimulating(false);
+        setSimStep(0);
+        setActiveToast(null);
+      }, 10000); // clear simulator after 10 seconds of arrival
+      return () => clearTimeout(timer);
+    }
+
+    const timer = setTimeout(() => {
+      const nextStep = (simStep + 1) as typeof simStep;
+      setSimStep(nextStep);
+      
+      if (nextStep === 2) {
+        playSfx('chime');
+        if (popupNotify) {
+          setActiveToast({
+            title: "🚲 Notifikasi Pintar: Melewati Jalan Utama",
+            msg: "Petugas Andi Wijaya saat ini berada di persimpangan jalan utama terdekat. Estimasi: 4 menit lagi!"
+          });
+        }
+      } else if (nextStep === 3) {
+        playSfx('chime');
+        if (popupNotify) {
+          setActiveToast({
+            title: "🔔 Notifikasi Pintar: Mendekati RT Anda",
+            msg: "Petugas berada di radius 300 meter. Siapkan sampah organik/anorganik terpilah Anda!"
+          });
+        }
+      } else if (nextStep === 4) {
+        playSfx('arrival');
+        if (popupNotify) {
+          setActiveToast({
+            title: "✨ Notifikasi Pintar: Petugas Telah Tiba!",
+            msg: "Andi Wijaya telah sampai di luar rumah Anda. Silakan keluarkan sampah Anda untuk diangkut."
+          });
+        }
+      }
+    }, 4500); // 4.5 seconds per step animation
+
+    return () => clearTimeout(timer);
+  }, [isSimulating, simStep]);
+
   // Load user data upon rendering
   useEffect(() => {
     // Scroll to top
@@ -240,7 +368,34 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
   };
 
   return (
-    <div className="pt-28 pb-20 bg-slate-50/50 min-h-screen">
+    <div className="pt-28 pb-20 bg-slate-50/50 min-h-screen relative">
+      {/* Floating Active Toast for Smart Notifications */}
+      {activeToast && (
+        <div className="fixed top-24 right-4 sm:right-8 z-50 max-w-sm w-full bg-slate-900 text-white rounded-3xl p-5 shadow-2xl border border-slate-800 flex flex-col gap-2 transition-all">
+          <div className="flex justify-between items-start">
+            <span className="font-extrabold text-sm text-emerald-400 flex items-center gap-1.5 leading-none">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+              {activeToast.title}
+            </span>
+            <button 
+              onClick={() => setActiveToast(null)}
+              className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded-lg transition-all cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <p className="text-xs text-slate-300 font-bold leading-relaxed">{activeToast.msg}</p>
+          {isSimulating && (
+            <div className="w-full bg-slate-805 bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+              <div 
+                className="bg-primary h-full transition-all duration-500 ease-out"
+                style={{ width: `${(simStep / 4) * 100}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Navigation Breadcrumb */}
@@ -599,6 +754,211 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
                 </div>
               )}
 
+            </div>
+
+            {/* Interactive "Notifikasi Pintar" Card Section */}
+            <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 shadow-xl space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
+                    <Bell className="w-5 h-5 text-primary animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                      Notifikasi Pintar
+                      <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-wider">Fitur Unggulan</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Sistem Peringatan Otomatis Operasional</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm font-semibold text-slate-600 leading-relaxed">
+                CleanSub memberikan kenyamanan maksimal dengan memberitahu Anda secara real-time saat petugas kebersihan kami mulai berjalan ke lokasi penjemputan sampah rumah Anda se-Bangka Belitung.
+              </p>
+
+              {/* Toggles */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/60 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <div>
+                      <span className="text-xs font-black text-slate-700 block">WhatsApp Alert</span>
+                      <span className="text-[8px] text-slate-400 font-bold block leading-none">Notifikasi CS</span>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={waNotify} 
+                      onChange={() => setWaNotify(!waNotify)} 
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <div>
+                      <span className="text-xs font-black text-slate-700 block">Web Pop-up</span>
+                      <span className="text-[8px] text-slate-400 font-bold block leading-none">Popup Layar</span>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={popupNotify} 
+                      onChange={() => setPopupNotify(!popupNotify)} 
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <div>
+                      <span className="text-xs font-black text-slate-700 block">Suara Chime</span>
+                      <span className="text-[8px] text-slate-400 font-bold block leading-none">Chime Aktif</span>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={soundNotify} 
+                      onChange={() => setSoundNotify(!soundNotify)} 
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Simulation Sandbox Panel */}
+              <div className="border border-slate-100 rounded-3xl p-5 bg-gradient-to-br from-slate-50 to-white shadow-inner relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10" />
+                
+                <div className="flex justify-between items-center mb-5 flex-wrap gap-2 relative z-10">
+                  <div>
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider block">Simulator Real-Time Notifikasi</span>
+                    <span className="text-[10px] text-slate-400 font-bold block mt-0.5">Uji coba interaksi notifikasi di perangkat Anda</span>
+                  </div>
+                  
+                  {!isSimulating ? (
+                    <button
+                      onClick={handleStartSimulation}
+                      className="bg-primary hover:bg-primary-dark text-white text-xs font-black py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer transform hover:scale-102"
+                    >
+                      <Play size={12} fill="white" className="shrink-0" />
+                      Mulai Simulasi
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20 font-black animate-pulse">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0" />
+                      Melacak Petugas...
+                    </span>
+                  )}
+                </div>
+
+                {/* Progress Animation Stepper */}
+                <div className="relative pt-2 pb-4">
+                  {/* Background Track bar */}
+                  <div className="absolute top-6 left-6 right-6 h-1.5 bg-slate-100 rounded-full z-0 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-primary-light to-primary h-full transition-all duration-500 ease-out" 
+                      style={{ width: isSimulating ? `${((simStep - 1) / 3) * 100}%` : '0%' }}
+                    />
+                  </div>
+
+                  {/* Steps */}
+                  <div className="grid grid-cols-4 relative z-10">
+                    {[
+                      { stepNum: 1, title: 'Keluar Hub', desc: 'Mulai' },
+                      { stepNum: 2, title: 'Transit', desc: 'Jalan Utama' },
+                      { stepNum: 3, title: 'Dekat RT', desc: '300 Meter' },
+                      { stepNum: 4, title: 'Sampai', desc: 'Ujung Jalan' }
+                    ].map((step, index) => {
+                      const isActive = isSimulating && simStep === step.stepNum;
+                      const isCompleted = isSimulating && simStep > step.stepNum;
+                      
+                      return (
+                        <div key={index} className="flex flex-col items-center text-center">
+                          <button 
+                            disabled={!isSimulating}
+                            onClick={() => setSimStep(step.stepNum)}
+                            className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 outline-none
+                              ${isActive 
+                                ? 'bg-primary border-primary text-white scale-110 shadow-lg shadow-primary/25 font-black' 
+                                : isCompleted 
+                                  ? 'bg-emerald-500 border-emerald-500 text-white font-black' 
+                                  : 'bg-white border-slate-200 text-slate-400 font-bold'
+                              }`}
+                          >
+                            {isCompleted ? (
+                              <Check className="w-4 h-4 shrink-0" strokeWidth={3} />
+                            ) : step.stepNum === 4 ? (
+                              <MapPin className="w-4 h-4 shrink-0" />
+                            ) : (
+                              <span className="text-xs">{step.stepNum}</span>
+                            )}
+                          </button>
+                          <span 
+                            className={`text-[10px] font-black mt-2 leading-none block
+                              ${isActive ? 'text-primary' : isCompleted ? 'text-slate-800' : 'text-slate-400'}`}
+                          >
+                            {step.title}
+                          </span>
+                          <span className="text-[8px] text-slate-400 font-bold mt-1 leading-none block hidden sm:block">
+                            {step.desc}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Status Box */}
+                {isSimulating && (
+                  <div className="mt-4 p-4 bg-white rounded-2xl border border-slate-100 text-slate-700 space-y-2.5 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-slate-50 pb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0">AW</div>
+                        <div>
+                          <span className="text-xs font-black text-slate-800 block leading-tight">Andi Wijaya</span>
+                          <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider block leading-none">Petugas CleanSub</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-primary font-black block leading-none">Estimasi</span>
+                        <span className="text-xs font-extrabold text-slate-800 block mt-0.5">
+                          {simStep === 1 ? '7 - 10 Menit' : simStep === 2 ? '4 - 6 Menit' : simStep === 3 ? '1 - 2 Menit' : 'Tiba di Lokasi'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-2 pt-0.5 text-left">
+                      <Navigation className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5 rotate-45" fill="rgb(16 185 129 / 10%)" />
+                      <p className="text-xs font-bold text-slate-600 leading-relaxed">
+                        {simStep === 1 && `Petugas Andi Wijaya saat ini telah bersiap dan mulai berkendara ke alamat Anda: ${address || 'Alamat Penjemputan CleanSub'}.`}
+                        {simStep === 2 && `Andi Wijaya terpantau di radar GPS melintasi jalan raya utama terdekat. Silakan mulai letakkan wadah sampah Anda di gerbang.`}
+                        {simStep === 3 && `Kurir hampir tiba! Andi Wijaya berada di radius gang rumah Anda. Mohon siapkan sampah organik dan anorganik terpilah Anda.`}
+                        {simStep === 4 && `Petugas CleanSub telah Tiba! Silakan kumpulkan sampah Anda di dekat lobi/gerbang rumah agar Andi dapat mengangkutnya sekarang.`}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {!isSimulating && (
+                  <div className="mt-4 p-3 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 text-center">
+                    <p className="text-[10px] text-slate-500 font-black leading-relaxed">
+                      💡 Klik <span className="text-primary font-extrabold">"Mulai Simulasi"</span> untuk mendeploy run simulasi di mana notifikasi berdering & pop-up browser aktif secara visual.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
           </div>
