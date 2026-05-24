@@ -4,7 +4,7 @@
  */
 
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ShieldCheck, Mail, Lock, User, ArrowLeft, ArrowRight } from 'lucide-react';
+import { X, ShieldCheck, Mail, Lock, User, ArrowLeft, ArrowRight, Phone, MapPin } from 'lucide-react';
 import { signInWithGoogle, db } from '../lib/firebase';
 import React, { useState } from 'react';
 import { collection, query, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -29,11 +29,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [address, setAddress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   const resetForm = () => {
     setEmail('');
     setPassword('');
     setFullName('');
+    setAddress('');
+    setPhoneNumber('');
     setError(null);
     setSuccessMessage(null);
     setMode('choice');
@@ -90,6 +94,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           email: email.toLowerCase(),
           password: password, // In a real app, this should be hashed. For this demo, it's a direct store.
           fullName: fullName,
+          address: address,
+          phoneNumber: phoneNumber,
           subscriptionPlan: 'none',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -138,7 +144,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -151,10 +157,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-white rounded-[2rem] shadow-2xl relative z-10 w-full max-w-md overflow-hidden border border-slate-100"
+            className="bg-white rounded-2xl shadow-2xl relative z-10 w-full max-w-md max-h-[95vh] flex flex-col overflow-y-auto border border-slate-100"
           >
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-6">
+            <div className="p-5 sm:p-6">
+              <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
                   {mode !== 'choice' && (
                     <button 
@@ -181,7 +187,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
               {/* Error Message */}
               {error && (
-                <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium border border-red-100 flex items-center gap-2">
+                <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-xs sm:text-sm font-medium border border-red-100 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
                   {error}
                 </div>
@@ -189,56 +195,56 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
               {/* Success Message */}
               {successMessage && (
-                <div className="mb-6 p-4 bg-green-50 text-green-600 rounded-xl text-sm font-medium border border-green-100 flex items-center gap-2">
+                <div className="mb-4 p-3 bg-green-50 text-green-600 rounded-xl text-xs sm:text-sm font-medium border border-green-100 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
                   {successMessage}
                 </div>
               )}
 
               {mode === 'choice' ? (
-                <div className="flex flex-col gap-4">
-                  <div className="text-center mb-4">
-                    <h3 className="text-2xl font-bold text-slate-900 mb-2">Pilih Metode Akses</h3>
-                    <p className="text-slate-500">Silakan masuk ke akun Anda atau daftar jika belum memiliki akun.</p>
+                <div className="flex flex-col gap-3">
+                  <div className="text-center mb-2">
+                    <h3 className="text-xl font-bold text-slate-900 mb-1">Pilih Metode Akses</h3>
+                    <p className="text-slate-500 text-xs sm:text-sm">Silakan masuk ke akun Anda atau daftar jika belum memiliki akun.</p>
                   </div>
                   
                   <button
                     onClick={() => setMode('register')}
-                    className="w-full flex items-center justify-between p-6 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 group"
+                    className="w-full flex items-center justify-between p-4 sm:p-5 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all shadow-md shadow-primary/10 group"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                        <User size={20} />
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
+                        <User size={18} />
                       </div>
                       <div className="text-left">
-                        <div className="text-sm opacity-80 font-medium">Pengguna Baru</div>
-                        <div className="text-lg">Buat Akun Baru</div>
+                        <div className="text-xs opacity-80 font-medium">Pengguna Baru</div>
+                        <div className="text-base">Buat Akun Baru</div>
                       </div>
                     </div>
-                    <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </button>
 
                   <button
                     onClick={() => setMode('login')}
-                    className="w-full flex items-center justify-between p-6 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 hover:border-slate-200 transition-all group"
+                    className="w-full flex items-center justify-between p-4 sm:p-5 bg-white border-2 border-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-50 hover:border-slate-200 transition-all group"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center">
-                        <Mail size={20} />
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center">
+                        <Mail size={18} />
                       </div>
                       <div className="text-left">
-                        <div className="text-sm opacity-60 font-medium font-display">Sudah Punya Akun</div>
-                        <div className="text-lg">Masuk Sekarang</div>
+                        <div className="text-xs opacity-60 font-medium font-display">Sudah Punya Akun</div>
+                        <div className="text-base">Masuk Sekarang</div>
                       </div>
                     </div>
-                    <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </button>
 
-                  <div className="relative my-4">
+                  <div className="relative my-2">
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t border-slate-100"></div>
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase tracking-widest font-black text-slate-300 bg-white px-4">
+                    <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-black text-slate-300 bg-white px-4">
                       Atau
                     </div>
                   </div>
@@ -246,66 +252,98 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   <button
                     onClick={handleGoogleLogin}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 py-4 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-200 transition-all group disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 py-3 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-200 transition-all group disabled:opacity-50"
                   >
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                     Lanjutkan dengan Google
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
-                  <div className="mb-4">
-                    <h3 className="text-2xl font-bold text-slate-900 mb-1">
+                <form onSubmit={handleEmailAuth} className="flex flex-col gap-3">
+                  <div className="mb-2">
+                    <h3 className="text-xl font-bold text-slate-900 mb-0.5">
                       {mode === 'register' ? 'Buat Akun' : 'Masuk Kembali'}
                     </h3>
-                    <p className="text-slate-500 text-sm">
+                    <p className="text-slate-500 text-xs">
                       {mode === 'register' ? 'Lengkapi data Anda untuk mendaftar.' : 'Gunakan email dan kata sandi Anda.'}
                     </p>
                   </div>
 
                   {mode === 'register' && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-bold text-slate-700 ml-1">Nama Lengkap</label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                        <input
-                          required
-                          type="text"
-                          placeholder="Masukkan nama lengkap"
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-primary focus:bg-white transition-all outline-none"
-                        />
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 ml-1">Nama Lengkap</label>
+                        <div className="relative">
+                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                          <input
+                            required
+                            type="text"
+                            placeholder="Masukkan nama lengkap"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border-2 border-slate-50 rounded-xl focus:border-primary focus:bg-white transition-all outline-none text-sm"
+                          />
+                        </div>
                       </div>
-                    </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 ml-1">Nomor WhatsApp</label>
+                        <div className="relative">
+                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                          <input
+                            required
+                            type="tel"
+                            placeholder="Contoh: 083125720412"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border-2 border-slate-50 rounded-xl focus:border-primary focus:bg-white transition-all outline-none text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 ml-1">Alamat Pengambilan Sampah</label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                          <input
+                            required
+                            type="text"
+                            placeholder="Contoh: Dul, Kab. Bangka Tengah"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border-2 border-slate-50 rounded-xl focus:border-primary focus:bg-white transition-all outline-none text-sm"
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
 
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-bold text-slate-700 ml-1">Email</label>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-600 ml-1">Email</label>
                     <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                       <input
                         required
                         type="email"
                         placeholder="nama@gmail.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-primary focus:bg-white transition-all outline-none"
+                        className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border-2 border-slate-50 rounded-xl focus:border-primary focus:bg-white transition-all outline-none text-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-bold text-slate-700 ml-1">Kata Sandi</label>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-600 ml-1">Kata Sandi</label>
                     <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                       <input
                         required
                         type="password"
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-primary focus:bg-white transition-all outline-none"
+                        className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border-2 border-slate-50 rounded-xl focus:border-primary focus:bg-white transition-all outline-none text-sm"
                       />
                     </div>
                   </div>
@@ -313,20 +351,20 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-primary text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-primary/30 hover:bg-primary-dark transition-all disabled:opacity-50 mt-4 flex items-center justify-center"
+                    className="w-full bg-primary text-white py-3 rounded-xl font-bold text-base shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all disabled:opacity-50 mt-3 flex items-center justify-center cursor-pointer"
                   >
                     {loading ? (
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                        className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
+                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                       />
                     ) : (
                       mode === 'register' ? 'Daftar Sekarang' : 'Masuk'
                     )}
                   </button>
 
-                  <p className="text-center text-sm font-medium text-slate-500 mt-2">
+                  <p className="text-center text-xs font-medium text-slate-500 mt-1">
                     {mode === 'register' ? 'Sudah punya akun?' : 'Belum punya akun?'} {' '}
                     <button
                       type="button"
@@ -339,10 +377,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 </form>
               )}
 
-              <div className="mt-8 pt-8 border-t border-slate-50 text-center">
-                <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
+              <div className="mt-4 pt-4 border-t border-slate-50 text-center">
+                <p className="text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
                   Dikelola Secara Aman Oleh <br />
-                  <span className="text-primary">CleanSub Infrastructure</span>
+                  <span className="text-primary font-bold">CleanSub Infrastructure</span>
                 </p>
               </div>
             </div>

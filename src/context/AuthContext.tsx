@@ -13,6 +13,8 @@ interface UserAccount {
   fullName: string;
   email: string;
   subscriptionPlan: string;
+  address?: string;
+  phoneNumber?: string;
 }
 
 interface AuthContextType {
