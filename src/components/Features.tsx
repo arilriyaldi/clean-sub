@@ -20,7 +20,7 @@ const features = [
   {
     icon: LayoutGrid,
     title: 'Dasbor Dashboard',
-    description: 'Kelola jadwal, riwayat penjemputan, dan laporan kebersihan dalam satu tempat.'
+    description: 'Kelola jadwal dan riwayat penjemputan dalam satu tempat.'
   },
   {
     icon: Clock,

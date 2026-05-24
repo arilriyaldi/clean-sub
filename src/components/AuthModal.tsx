@@ -177,7 +177,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                       {mode === 'register' ? 'Buat Akun' : 'Masuk Kembali'}
                     </h3>
                     <p className="text-slate-500 text-xs">
-                      {mode === 'register' ? 'Lengkapi data Anda untuk mendaftar.' : 'Gunakan email dan kata sandi Anda.'}
+                      {mode === 'register' ? 'Lengkapi data Anda untuk mendaftar.' : 'Gunakan email & kata sandi apa saja (akun otomatis dibuat jika belum terdaftar).'}
                     </p>
                   </div>
 

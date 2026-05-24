@@ -97,7 +97,7 @@ const SUBSCRIPTION_DETAILS: Record<string, {
       'Pengambilan sampah setiap hari',
       'Layanan penjemputan prioritas utama',
       'Notifikasi jadwal instan otomatis',
-      'Dasbor eksklusif & pelaporan khusus',
+      'Dasbor eksklusif & kelola jadwal',
       'Manajer akun pribadi ramah lingkungan',
       'Pengangkutan sampah besar bulanan Gratis'
     ]
@@ -199,8 +199,8 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
     
     if (popupNotify) {
       setActiveToast({
-        title: "📲 Notifikasi Pintar: Andi Mulai Berjalan!",
-        msg: `Petugas Andi Wijaya telah beranjak dari Hub CleanSub se-Bangka Belitung menuju rumah Anda di ${address || 'Alamat Anda'}.`
+        title: "📲 Notifikasi: Mobil Menuju Rumah Anda",
+        msg: `Mobil operasional CleanSub yang dikendarai Andi Wijaya sedang menuju ke rumah Anda di ${address || 'Alamat Anda'}.`
       });
     }
   };
@@ -209,7 +209,7 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
   useEffect(() => {
     if (!isSimulating || simStep === 0) return;
 
-    if (simStep === 4) {
+    if (simStep === 3) {
       // Completed, let's keep it on screen or clear after timeout
       const timer = setTimeout(() => {
         setIsSimulating(false);
@@ -227,24 +227,16 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
         playSfx('chime');
         if (popupNotify) {
           setActiveToast({
-            title: "🚲 Notifikasi Pintar: Melewati Jalan Utama",
-            msg: "Petugas Andi Wijaya saat ini berada di persimpangan jalan utama terdekat. Estimasi: 4 menit lagi!"
+            title: "🚙 Notifikasi: 500 m Lagi!",
+            msg: "Mobil operasional CleanSub tinggal 500 meter lagi dari rumah Anda. Silakan bersiap di depan."
           });
         }
       } else if (nextStep === 3) {
-        playSfx('chime');
-        if (popupNotify) {
-          setActiveToast({
-            title: "🔔 Notifikasi Pintar: Mendekati RT Anda",
-            msg: "Petugas berada di radius 300 meter. Siapkan sampah organik/anorganik terpilah Anda!"
-          });
-        }
-      } else if (nextStep === 4) {
         playSfx('arrival');
         if (popupNotify) {
           setActiveToast({
-            title: "✨ Notifikasi Pintar: Petugas Telah Tiba!",
-            msg: "Andi Wijaya telah sampai di luar rumah Anda. Silakan keluarkan sampah Anda untuk diangkut."
+            title: "✨ Notifikasi: Mobil Sudah di Depan Rumah!",
+            msg: "Mobil operasional CleanSub sudah berada di depan rumah Anda. Silakan kumpulkan sampah Anda."
           });
         }
       }
@@ -386,10 +378,10 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
           </div>
           <p className="text-xs text-slate-300 font-bold leading-relaxed">{activeToast.msg}</p>
           {isSimulating && (
-            <div className="w-full bg-slate-805 bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
               <div 
                 className="bg-primary h-full transition-all duration-500 ease-out"
-                style={{ width: `${(simStep / 4) * 100}%` }}
+                style={{ width: `${(simStep / 3) * 100}%` }}
               />
             </div>
           )}
@@ -869,17 +861,16 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
                   <div className="absolute top-6 left-6 right-6 h-1.5 bg-slate-100 rounded-full z-0 overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-primary-light to-primary h-full transition-all duration-500 ease-out" 
-                      style={{ width: isSimulating ? `${((simStep - 1) / 3) * 100}%` : '0%' }}
+                      style={{ width: isSimulating ? `${((simStep - 1) / 2) * 100}%` : '0%' }}
                     />
                   </div>
 
                   {/* Steps */}
-                  <div className="grid grid-cols-4 relative z-10">
+                  <div className="grid grid-cols-3 relative z-10">
                     {[
-                      { stepNum: 1, title: 'Keluar Hub', desc: 'Mulai' },
-                      { stepNum: 2, title: 'Transit', desc: 'Jalan Utama' },
-                      { stepNum: 3, title: 'Dekat RT', desc: '300 Meter' },
-                      { stepNum: 4, title: 'Sampai', desc: 'Ujung Jalan' }
+                      { stepNum: 1, title: 'Mobil Menuju Rumah Anda', desc: 'Mulai' },
+                      { stepNum: 2, title: '500 M Lagi', desc: 'Mendekati' },
+                      { stepNum: 3, title: 'Mobil Sudah di Depan Rumah', desc: 'Tiba' }
                     ].map((step, index) => {
                       const isActive = isSimulating && simStep === step.stepNum;
                       const isCompleted = isSimulating && simStep > step.stepNum;
@@ -899,14 +890,14 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
                           >
                             {isCompleted ? (
                               <Check className="w-4 h-4 shrink-0" strokeWidth={3} />
-                            ) : step.stepNum === 4 ? (
+                            ) : step.stepNum === 3 ? (
                               <MapPin className="w-4 h-4 shrink-0" />
                             ) : (
                               <span className="text-xs">{step.stepNum}</span>
                             )}
                           </button>
                           <span 
-                            className={`text-[10px] font-black mt-2 leading-none block
+                            className={`text-[10px] font-black mt-2 leading-none block px-1
                               ${isActive ? 'text-primary' : isCompleted ? 'text-slate-800' : 'text-slate-400'}`}
                           >
                             {step.title}
@@ -934,7 +925,7 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
                       <div className="text-right">
                         <span className="text-[10px] text-primary font-black block leading-none">Estimasi</span>
                         <span className="text-xs font-extrabold text-slate-800 block mt-0.5">
-                          {simStep === 1 ? '7 - 10 Menit' : simStep === 2 ? '4 - 6 Menit' : simStep === 3 ? '1 - 2 Menit' : 'Tiba di Lokasi'}
+                          {simStep === 1 ? '5 - 7 Menit' : simStep === 2 ? '1 - 2 Menit' : 'Tiba di Lokasi'}
                         </span>
                       </div>
                     </div>
@@ -942,10 +933,9 @@ export default function ProfilePage({ onBackToHome, onAuthRequired }: ProfilePag
                     <div className="flex items-start gap-2 pt-0.5 text-left">
                       <Navigation className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5 rotate-45" fill="rgb(16 185 129 / 10%)" />
                       <p className="text-xs font-bold text-slate-600 leading-relaxed">
-                        {simStep === 1 && `Petugas Andi Wijaya saat ini telah bersiap dan mulai berkendara ke alamat Anda: ${address || 'Alamat Penjemputan CleanSub'}.`}
-                        {simStep === 2 && `Andi Wijaya terpantau di radar GPS melintasi jalan raya utama terdekat. Silakan mulai letakkan wadah sampah Anda di gerbang.`}
-                        {simStep === 3 && `Kurir hampir tiba! Andi Wijaya berada di radius gang rumah Anda. Mohon siapkan sampah organik dan anorganik terpilah Anda.`}
-                        {simStep === 4 && `Petugas CleanSub telah Tiba! Silakan kumpulkan sampah Anda di dekat lobi/gerbang rumah agar Andi dapat mengangkutnya sekarang.`}
+                        {simStep === 1 && `Petugas Andi Wijaya mengendarai mobil operasional menuju alamat Anda: ${address || 'Alamat Penjemputan CleanSub'}.`}
+                        {simStep === 2 && `Mobil operasional CleanSub berjarak 500 meter dari rumah Anda. Silakan bersiap membawa sampah Anda ke depan.`}
+                        {simStep === 3 && `Mobil sudah di depan rumah Anda! Petugas CleanSub siap mengangkut dan mencatat kontribusi penjemputan sampah terpilah Anda hari ini.`}
                       </p>
                     </div>
                   </div>

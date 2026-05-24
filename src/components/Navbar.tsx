@@ -1,17 +1,27 @@
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Trash2, Menu, X, LogOut, User as UserIcon } from 'lucide-react';
-import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   onAuthRequired: () => void;
   onViewProfile: () => void;
   onGoHome: () => void;
+  onViewDashboard: () => void;
 }
 
-export default function Navbar({ onAuthRequired, onViewProfile, onGoHome }: NavbarProps) {
+export default function Navbar({ onAuthRequired, onViewProfile, onGoHome, onViewDashboard }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user, profile, logout } = useAuth();
+
+  const handleDashboardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) {
+      onAuthRequired();
+    } else {
+      onViewDashboard();
+    }
+  };
 
   return (
     <nav className="fixed w-full z-50 glass-morphism border-b border-slate-100 animate-slide-down">
@@ -33,6 +43,12 @@ export default function Navbar({ onAuthRequired, onViewProfile, onGoHome }: Navb
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
             <a href="#fitur" onClick={() => { onGoHome(); }} className="text-sm font-bold text-slate-600 hover:text-primary transition-colors">Fitur</a>
+            <button 
+              onClick={handleDashboardClick}
+              className="text-sm font-bold text-slate-600 hover:text-primary transition-colors cursor-pointer text-left bg-transparent border-none p-0 focus:outline-none"
+            >
+              Dashboard
+            </button>
             <a href="#langganan" onClick={() => { onGoHome(); }} className="text-sm font-bold text-slate-600 hover:text-primary transition-colors">Langganan</a>
             
             {user ? (
@@ -85,6 +101,12 @@ export default function Navbar({ onAuthRequired, onViewProfile, onGoHome }: Navb
           className="md:hidden bg-white border-b border-slate-100 px-4 pt-2 pb-6 flex flex-col gap-4 shadow-xl"
         >
           <a href="#fitur" onClick={() => { setIsOpen(false); onGoHome(); }} className="text-base font-semibold text-slate-600 px-2 py-2">Fitur</a>
+          <button 
+            onClick={(e) => { setIsOpen(false); handleDashboardClick(e); }}
+            className="text-base font-semibold text-slate-600 px-2 py-2 text-left bg-transparent border-none cursor-pointer focus:outline-none"
+          >
+            Dashboard
+          </button>
           <a href="#langganan" onClick={() => { setIsOpen(false); onGoHome(); }} className="text-base font-semibold text-slate-600 px-2 py-2">Langganan</a>
           
           {user ? (
